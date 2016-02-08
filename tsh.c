@@ -4,10 +4,10 @@
  * You __MUST__ add your user information here below
  *
  * === User information ===
- * Group: NONE
- * User 1: dude14
+ * Group: Olafur & Asgeir
+ * User 1: olafurks10
  * SSN: 1807825919
- * User 2:
+ * User 2: asgeira13
  * SSN: X
  * === End User Information ===
  */
@@ -169,10 +169,22 @@ int main(int argc, char **argv)
  * the foreground, wait for it to terminate and then return.  Note:
  * each child process must have a unique process group ID so that our
  * background children don't receive SIGINT (SIGTSTP) from the kernel
- * when we type ctrl-c (ctrl-z) at the keyboard.
+ * when we type ctrl-c (ctrl-z) at the keyboard. approx 70 lines
  */
 void eval(char *cmdline)
 {
+	char* command;
+	char* array[10];
+	int i;
+	i = 0;
+	command = strtok(cmdline, " ");
+	
+	while(strcmp(command,"\n") != 0){
+		array[i] = command;
+		command = strtok(NULL, " ");
+		//printf("%s\n", array[i]);
+		i++;
+	}
     return;
 }
 
@@ -238,7 +250,7 @@ int parseline(const char *cmdline, char **argv)
 
 /*
  * builtin_cmd - If the user has typed a built-in command then execute
- *    it immediately.
+ *    it immediately. approx 25 lines
  */
 int builtin_cmd(char **argv)
 {
@@ -246,7 +258,7 @@ int builtin_cmd(char **argv)
 }
 
 /*
- * do_bgfg - Execute the builtin bg and fg commands
+ * do_bgfg - Execute the builtin bg and fg commands, approx 50 lines
  */
 void do_bgfg(char **argv)
 {
@@ -255,6 +267,7 @@ void do_bgfg(char **argv)
 
 /*
  * waitfg - Block until process pid is no longer the foreground process
+ * approx 20 lines
  */
 void waitfg(pid_t pid)
 {
@@ -270,7 +283,7 @@ void waitfg(pid_t pid)
  *     a child job terminates (becomes a zombie), or stops because it
  *     received a SIGSTOP or SIGTSTP signal. The handler reaps all
  *     available zombie children, but doesn't wait for any other
- *     currently running children to terminate.
+ *     currently running children to terminate. approx 80 lines
  */
 void sigchld_handler(int sig)
 {
@@ -280,7 +293,7 @@ void sigchld_handler(int sig)
 /*
  * sigint_handler - The kernel sends a SIGINT to the shell whenver the
  *    user types ctrl-c at the keyboard.  Catch it and send it along
- *    to the foreground job.
+ *    to the foreground job. approx 15 lines
  */
 void sigint_handler(int sig)
 {
@@ -290,7 +303,7 @@ void sigint_handler(int sig)
 /*
  * sigtstp_handler - The kernel sends a SIGTSTP to the shell whenever
  *     the user types ctrl-z at the keyboard. Catch it and suspend the
- *     foreground job by sending it a SIGTSTP.
+ *     foreground job by sending it a SIGTSTP. approx 15 lines
  */
 void sigtstp_handler(int sig)
 {
