@@ -86,7 +86,6 @@ struct job_t *getjobpid(struct job_t *jobs, pid_t pid);
 struct job_t *getjobjid(struct job_t *jobs, int jid);
 int pid2jid(pid_t pid);
 void listjobs(struct job_t *jobs);
-
 void usage(void);
 void unix_error(char *msg);
 void app_error(char *msg);
@@ -242,6 +241,12 @@ int parseline(const char *cmdline, char **argv)
  */
 int builtin_cmd(char **argv)
 {
+    char* command = argv[0];
+    if(strcmp(command, "quit"))exit(0);
+    if(strcmp(command, "fg") || strcmp(command, "bg")){
+	do_bgfg(argv);
+    }
+    if(strcmp(command, "jobs"));
     return 0;     /* not a builtin command */
 }
 
