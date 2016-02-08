@@ -8,7 +8,7 @@
  * User 1: olafurks10
  * SSN: 1807825919
  * User 2: asgeira13
- * SSN: X
+ * SSN: 2303882299
  * === End User Information ===
  */
 #include <stdio.h>
