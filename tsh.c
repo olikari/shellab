@@ -276,10 +276,10 @@ int builtin_cmd(char **argv)
     char* command = *argv;
     //printf("Value from command: %s\n",command);
     if(!strcmp(command, "quit")){
-	exit(0);
+		exit(0);
     }
     if(!strcmp(command, "fg") || !strcmp(command, "bg")){
-	return 1;do_bgfg(argv);
+		return 1; do_bgfg(argv);
     }
     if(!strcmp(command, "jobs"));
     	return 0;     /* not a builtin command */
@@ -290,6 +290,7 @@ int builtin_cmd(char **argv)
  */
 void do_bgfg(char **argv)
 {
+
     return;
 }
 
@@ -325,7 +326,8 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig)
 {
-    return;
+	printf("Cought SIGINT\n");
+	exit(0);
 }
 
 /*
