@@ -177,7 +177,7 @@ void eval(char *cmdline)
 	int bg;
 	pid_t pid;
 
-	strcmp(buf, cmdline);
+	strcpy(buf, cmdline);
 	bg = parseline(buf, argv);
 	
 	// no arguments in the command line
@@ -205,22 +205,6 @@ void eval(char *cmdline)
 			printf("%d %s", pid, cmdline);
 	}
 	return;
-
-	/*int args;
-	char* buf;
-	char* delim;
-	char** tokens = NULL;
-	
-	buf = cmdline;
-	args = 0;
-	while((delim = strchr(buf, ' '))){
-		tokens[args++] = buf;
-		*delim = '\0';
-		buf = delim + 1;
-		while(*buf && (*buf == ' '))
-			buf++;
-		//printf("%s\n", tokens[args]);
-	}*/
 }
 
 /*
