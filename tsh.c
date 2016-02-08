@@ -174,17 +174,20 @@ int main(int argc, char **argv)
 void eval(char *cmdline)
 {
 	char* command;
-	char* array[10];
-	int i;
-	i = 0;
+	char* array[10];	// command line parsed
+	int args;			// number of arguments
+	args = 0;
 	command = strtok(cmdline, " ");
 	
 	while(strcmp(command,"\n") != 0){
-		array[i] = command;
+		array[args++] = command;
 		command = strtok(NULL, " ");
-		//printf("%s\n", array[i]);
-		i++;
+		printf("%s\n", array[args]);
 	}
+
+	/*if(args == 0){
+		return 0;
+	}*/
     return;
 }
 
