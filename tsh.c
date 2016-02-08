@@ -171,23 +171,56 @@ int main(int argc, char **argv)
  * when we type ctrl-c (ctrl-z) at the keyboard. approx 70 lines
  */
 void eval(char *cmdline)
-{
-	char* command;
-	char* array[10];	// command line parsed
-	int args;			// number of arguments
-	args = 0;
-	command = strtok(cmdline, " ");
-	
-	while(strcmp(command,"\n") != 0){
-		array[args++] = command;
-		command = strtok(NULL, " ");
-		printf("%s\n", array[args]);
-	}
+{	
+	char *argv[MAXARGS];
+	char buf[MAXLINE];
+	int bg;
+	pid_t pid;
 
-	/*if(args == 0){
-		return 0;
+	strcmp(buf, cmdline);
+	bg = parseline(buf, argv);
+	
+	// no arguments in the command line
+	if(argv[0] == NULL){
+		return;
+	}
+	
+	// ef ekki built in command
+	if(!builtin_cmd(argv)){
+		if((pid = fork()) == 0){
+			if(execve(argv[0], argv, environ) < 0){
+				// gæti komið villa á þessa print skipun
+				printf("Whoopsy, the command %s was not found. \n", argv[0]);
+				exit(0);
+			}
+		}
+
+		// parent waits for foreground job to terminate
+		if(!bg) {
+			int status;
+			if(waitpid(pid, &status, 0) < 0)
+				unix_error("waitfg: waitpid error");
+		}
+		else
+			printf("%d %s", pid, cmdline);
+	}
+	return;
+
+	/*int args;
+	char* buf;
+	char* delim;
+	char** tokens = NULL;
+	
+	buf = cmdline;
+	args = 0;
+	while((delim = strchr(buf, ' '))){
+		tokens[args++] = buf;
+		*delim = '\0';
+		buf = delim + 1;
+		while(*buf && (*buf == ' '))
+			buf++;
+		//printf("%s\n", tokens[args]);
 	}*/
-    return;
 }
 
 /*
@@ -259,10 +292,10 @@ int builtin_cmd(char **argv)
     char* command = argv[0];
     if(strcmp(command, "quit"))exit(0);
     if(strcmp(command, "fg") || strcmp(command, "bg")){
-	do_bgfg(argv);
+		do_bgfg(argv);
     }
     if(strcmp(command, "jobs"));
-    return 0;     /* not a builtin command */
+    	return 0;     /* not a builtin command */
 }
 
 /*
