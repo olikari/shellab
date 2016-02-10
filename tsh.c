@@ -199,14 +199,16 @@ void eval(char *cmdline)
 		// parent waits for foreground job to terminate
 		if(!bg) {
 			int status;
+
 			addjob(jobs, pid, FG, cmdline);
 			if(waitpid(pid, &status, 0) < 0)
 				unix_error("waitfg: waitpid error");
 		}
-		else
+		else{
 			addjob(jobs, pid, BG, cmdline);
 			int jid = pid2jid(pid);
 			printf("[%d] %d %s", jid, pid, cmdline);
+		}
 	}
 	return;
 }
@@ -325,6 +327,22 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig)
 {
+	int status;
+	pid_t pid;
+	
+	while((pid = waitpid(-1, &status, WNOHANG|WUNTRACED)) > 0){
+		if(WIFEXITED(status)){
+			deletejob(jobs, pid);
+			printf("Child %d terminated normally with exit status=%d\n", pid, WEXITSTATUS(status));
+		}
+		else{
+			//printf("Child %d terminated abnormally\n", pid);
+			if(WIFSIGNALED(status)){
+				deletejob(jobs, pid);
+				printf("Child %d terminated caused by the signal=%d\n", pid, WTERMSIG(status));
+			}
+		}
+	}
     return;
 }
 
@@ -340,9 +358,9 @@ void sigint_handler(int sig)
 		return;
 	else{
 		int jid = pid2jid(pid);
-		printf("Job [%d] (%d) terminated by signal 2       ", jid, pid);
+		printf("Job [%d] (%d) terminated by signal 2\n", jid, pid);
 		kill(pid, SIGINT);
-		//deletejob(jobs, pid);
+		deletejob(jobs, pid);
 		return;
 	}
 }
@@ -358,7 +376,7 @@ void sigtstp_handler(int sig)
 		return;
 	else{
 		int jid = pid2jid(pid);
-		printf("Job [%d] (%d) stopped by signal 20", jid, pid);
+		printf("Job [%d] (%d) stopped by signal 20\n", jid, pid);
 		kill(-(pid), SIGTSTP);
 		return;
 	}
