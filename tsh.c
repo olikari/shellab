@@ -92,6 +92,9 @@ void app_error(char *msg);
 typedef void handler_t(int);
 handler_t *Signal(int signum, handler_t *handler);
 
+/* My OWN helper functions */
+int isNumber(char input[]);
+
 /*
  * main - The shell's main routine
  */
@@ -299,24 +302,59 @@ int builtin_cmd(char **argv)
 	}
 }
 
+int isNumber(char input[]){
+	int i;
+	for(i = 0; i < strlen(input); i++){
+		if(!isdigit(input[i])){
+			return 0;
+		}
+	}
+	return 1;
+}
+
 /*
  * do_bgfg - Execute the builtin bg and fg commands, approx 50 lines
  */
 void do_bgfg(char **argv)
 {
-	char in[10];
-	//memmove(in, argv[1]+1, argv[1].length-1);
-	printf("Þetta á að vera einungis int tala: %s", in);
-	// error check
+	// Error check á input
 	if(argv[1] == NULL){
-		printf("fg command requires PID or %jobid argument");
+		printf("fg command requires PID or %%jobid argument\n");
 		return;
 	}
-	//if(isdigit(argv[1]) || (argv[1][0] == "%" && isdigit(argv[1)
+
+	char in[10];
+	memset(&in[0], 0, sizeof(in));
+	int isJobId = 0;
+	
+	if(argv[1][0] == '%'){
+		strncpy(in, argv[1]+1, strlen(argv[1])-1);
+		isJobId = 1;
+	}
+	else{
+		strncpy(in, argv[1], strlen(argv[1]));
+	}
+	
+	if(!isNumber(in)){	
+		printf("fg: argument must be a PID or %%jobid\n");
+		return;
+	}
+	
+	// ef argument er process id og finnst ekki í jobs töflu
+	if(!getjobpid(jobs, atoi(in)) && !isJobId){
+		printf("(%s): No such process\n", in);
+		return;
+	}
+	// ef argument er jobId og finnst ekki í jobs töflu
+	else if(!getjobjid(jobs, atoi(in)) && isJobId){
+		printf("fg %%%s: No such job\n", in);
+		return;
+	}
+	
+
 
     return;
 }
-
 /*
  * waitfg - Block until process pid is no longer the foreground process
  * approx 20 lines
