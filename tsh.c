@@ -179,6 +179,10 @@ void eval(char *cmdline)
 	char buf[MAXLINE];
 	int bg;
 	pid_t pid;
+	// Búum til signal sett og öddum SIGCHLD signal í settið
+	sigset_t sigset;
+	sigemptyset(&sigset);
+	sigaddset(&sigset, SIGCHLD);
 
 	strcpy(buf, cmdline);
 	bg = parseline(buf, argv);
@@ -190,7 +194,10 @@ void eval(char *cmdline)
 	
 	// ef ekki built in command
 	if(!builtin_cmd(argv)){
+		// remove the signals pointed to by set from the thread mask.
+		sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 		if((pid = fork()) == 0){
+			setpgrp();
 			if(execve(argv[0], argv, environ) < 0){
 				// gæti komið villa á þessa print skipun
 				printf("Whoopsy, the command %s was not found. \n", argv[0]);
@@ -199,18 +206,23 @@ void eval(char *cmdline)
 			}
 		}
 
+		// !!! Parent should add the child to the job list and then unblock the SIGCHLD signal. Why? !!!
+
+		pause();
+
 		// parent waits for foreground job to terminate
-		if(!bg) {
+		/*if(!bg) {
 			int status;
 			addjob(jobs, pid, FG, cmdline);
-			if(waitpid(pid, &status, 0) < 0)
-				unix_error("waitfg: waitpid error");
+			// séð að við eigum alls ekki að kalla á waitpid í eval.... ?
+			//if(waitpid(pid, &status, 0) < 0)
+			//	unix_error("waitfg: waitpid error");
 		}
 		else{
 			addjob(jobs, pid, BG, cmdline);
 			int jid = pid2jid(pid);
 			printf("[%d] %d %s", jid, pid, cmdline);
-		}
+		}*/
 	}
 	return;
 }
@@ -360,7 +372,10 @@ void do_bgfg(char **argv)
  * approx 20 lines
  */
 void waitfg(pid_t pid)
-{
+{	
+	while(getjobpid(jobs, pid)->state == 2){
+		sleep(1);
+	}
     return;
 }
 
@@ -380,6 +395,10 @@ void sigchld_handler(int sig)
 	int status;
 	pid_t pid;
 	
+	if(verbose){
+		printf("Sigchld handler keyrdur\n");
+	}
+	
 	while((pid = waitpid(-1, &status, WNOHANG|WUNTRACED)) > 0){
 		if(WIFEXITED(status)){
 			deletejob(jobs, pid);
@@ -392,7 +411,8 @@ void sigchld_handler(int sig)
 				printf("Child %d terminated caused by the signal=%d\n", pid, WTERMSIG(status));
 			}
 			if(WIFSTOPPED(status)){
-				
+				getjobpid(jobs, pid)->state = 3;
+				printf("Child %d was stopped by the signal=%d\n", pid, WSTOPSIG(status));	
 			}
 		}
 	}
