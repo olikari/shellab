@@ -199,7 +199,6 @@ void eval(char *cmdline)
 		// parent waits for foreground job to terminate
 		if(!bg) {
 			int status;
-
 			addjob(jobs, pid, FG, cmdline);
 			if(waitpid(pid, &status, 0) < 0)
 				unix_error("waitfg: waitpid error");
@@ -282,12 +281,16 @@ int builtin_cmd(char **argv)
     char* command = *argv;
     //printf("Value from command: %s\n",command);
 	if(!strcmp(command, "quit")){
+		// þurfum að tjekka hér hvort það séu einnhver background jobs og bara exita ef það eru engin
+		// ef það eru einnhver background jobs, prenta message og returna !
 		exit(0);
     }
 	else if(!strcmp(command, "fg") || !strcmp(command, "bg")){
-		return 1; do_bgfg(argv);
+		do_bgfg(argv);
+		return 1;
     }
 	else if(!strcmp(command, "jobs")){
+		// eigum bara að lista upp background jobs, held að þetta sé í góðu svona...
 		listjobs(jobs);
 		return 1;
 	}   
@@ -301,6 +304,15 @@ int builtin_cmd(char **argv)
  */
 void do_bgfg(char **argv)
 {
+	char in[10];
+	//memmove(in, argv[1]+1, argv[1].length-1);
+	printf("Þetta á að vera einungis int tala: %s", in);
+	// error check
+	if(argv[1] == NULL){
+		printf("fg command requires PID or %jobid argument");
+		return;
+	}
+	//if(isdigit(argv[1]) || (argv[1][0] == "%" && isdigit(argv[1)
 
     return;
 }
@@ -341,6 +353,9 @@ void sigchld_handler(int sig)
 				deletejob(jobs, pid);
 				printf("Child %d terminated caused by the signal=%d\n", pid, WTERMSIG(status));
 			}
+			if(WIFSTOPPED(status)){
+				
+			}
 		}
 	}
     return;
@@ -360,8 +375,6 @@ void sigint_handler(int sig)
 		int jid = pid2jid(pid);
 		printf("Job [%d] (%d) terminated by signal 2\n", jid, pid);
 		kill(pid, SIGINT);
-		deletejob(jobs, pid);
-		return;
 	}
 }
 /*
@@ -377,8 +390,7 @@ void sigtstp_handler(int sig)
 	else{
 		int jid = pid2jid(pid);
 		printf("Job [%d] (%d) stopped by signal 20\n", jid, pid);
-		kill(-(pid), SIGTSTP);
-		return;
+		kill(pid, SIGTSTP);
 	}
 }
 
