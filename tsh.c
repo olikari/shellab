@@ -191,6 +191,7 @@ void eval(char *cmdline)
 			if(execve(argv[0], argv, environ) < 0){
 				// gæti komið villa á þessa print skipun
 				printf("Whoopsy, the command %s was not found. \n", argv[0]);
+				fflush(stdout);
 				exit(0);
 			}
 		}
@@ -198,11 +199,14 @@ void eval(char *cmdline)
 		// parent waits for foreground job to terminate
 		if(!bg) {
 			int status;
+			addjob(jobs, pid, FG, cmdline);
 			if(waitpid(pid, &status, 0) < 0)
 				unix_error("waitfg: waitpid error");
 		}
 		else
-			printf("%d %s", pid, cmdline);
+			addjob(jobs, pid, BG, cmdline);
+			int jid = pid2jid(pid);
+			printf("[%d] %d %s", jid, pid, cmdline);
 	}
 	return;
 }
@@ -275,14 +279,19 @@ int builtin_cmd(char **argv)
 {
     char* command = *argv;
     //printf("Value from command: %s\n",command);
-    if(!strcmp(command, "quit")){
+	if(!strcmp(command, "quit")){
 		exit(0);
     }
-    if(!strcmp(command, "fg") || !strcmp(command, "bg")){
+	else if(!strcmp(command, "fg") || !strcmp(command, "bg")){
 		return 1; do_bgfg(argv);
     }
-    if(!strcmp(command, "jobs"));
-    	return 0;     /* not a builtin command */
+	else if(!strcmp(command, "jobs")){
+		listjobs(jobs);
+		return 1;
+	}   
+	else{
+		return 0;
+	}
 }
 
 /*
@@ -326,10 +335,17 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig)
 {
-	printf("Cought SIGINT\n");
-	exit(0);
+	int pid = fgpid(jobs);
+	if(pid == 0)
+		return;
+	else{
+		int jid = pid2jid(pid);
+		printf("Job [%d] (%d) terminated by signal 2       ", jid, pid);
+		kill(pid, SIGINT);
+		//deletejob(jobs, pid);
+		return;
+	}
 }
-
 /*
  * sigtstp_handler - The kernel sends a SIGTSTP to the shell whenever
  *     the user types ctrl-z at the keyboard. Catch it and suspend the
@@ -337,7 +353,15 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig)
 {
-    return;
+	int pid = fgpid(jobs);
+	if(pid == 0) 
+		return;
+	else{
+		int jid = pid2jid(pid);
+		printf("Job [%d] (%d) stopped by signal 20", jid, pid);
+		kill(-(pid), SIGTSTP);
+		return;
+	}
 }
 
 /*********************
