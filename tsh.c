@@ -362,8 +362,31 @@ void do_bgfg(char **argv)
 		printf("fg %%%s: No such job\n", in);
 		return;
 	}
-	
 
+	struct job_t* job;
+
+	if(isJobId){
+		job = getjobjid(jobs, atoi(in));
+	}
+	else{
+		job = getjobpid(jobs, atoi(in));
+	}
+
+	if(job->state == 3 && (strcmp(argv[0], "bg") == 0)){
+		job->state = 1;
+		// senda SIGCONT signal to process group
+		kill(job->pid, SIGCONT);
+	}
+	else if(job->state == 3 && (strcmp(argv[0], "fg") == 0)){
+		job->state = 2;
+		// senda SIGCONT á process group og wait með waitfg
+		kill(job->pid, SIGCONT);
+		waitfg(job->pid);
+	}
+	else if(job->state == 1 && (strcmp(argv[0], "fg") == 0)){
+		job->state = 2;
+		waitfg(job->pid);
+	}
 
     return;
 }
