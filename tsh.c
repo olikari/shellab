@@ -195,9 +195,10 @@ void eval(char *cmdline)
 	// ef ekki built in command
 	if(!builtin_cmd(argv)){
 		// remove the signals pointed to by set from the thread mask.
-		sigprocmask(SIG_UNBLOCK, &sigset, NULL);
+		sigprocmask(SIG_BLOCK, &sigset, NULL);
 		if((pid = fork()) == 0){
 			setpgrp();
+			sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 			if(execve(argv[0], argv, environ) < 0){
 				// gæti komið villa á þessa print skipun
 				printf("Whoopsy, the command %s was not found. \n", argv[0]);
@@ -211,18 +212,17 @@ void eval(char *cmdline)
 		pause();
 
 		// parent waits for foreground job to terminate
-		/*if(!bg) {
-			int status;
+		if(!bg) {
 			addjob(jobs, pid, FG, cmdline);
-			// séð að við eigum alls ekki að kalla á waitpid í eval.... ?
-			//if(waitpid(pid, &status, 0) < 0)
-			//	unix_error("waitfg: waitpid error");
+			sigprocmask(SIG_UNBLOCK, &sigset, NULL);
+			waitfg(pid);
 		}
 		else{
 			addjob(jobs, pid, BG, cmdline);
-			int jid = pid2jid(pid);
-			printf("[%d] %d %s", jid, pid, cmdline);
-		}*/
+			sigprocmask(SIG_UNBLOCK, &sigset, NULL);
+			//int jid = pid2jid(pid);
+			//printf("[%d] %d %s", jid, pid, cmdline);
+		}
 	}
 	return;
 }
