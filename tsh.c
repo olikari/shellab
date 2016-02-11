@@ -334,9 +334,9 @@ void do_bgfg(char **argv)
 	}
 
 	char in[10];
-	memset(&in[0], 0, sizeof(in));
 	int isJobId = 0;
-	
+	memset(&in[0], 0, sizeof(in));
+
 	if(argv[1][0] == '%'){
 		strncpy(in, argv[1]+1, strlen(argv[1])-1);
 		isJobId = 1;
@@ -362,7 +362,6 @@ void do_bgfg(char **argv)
 	}
 
 	struct job_t* job;
-
 	if(isJobId){
 		job = getjobjid(jobs, atoi(in));
 	}
@@ -375,17 +374,14 @@ void do_bgfg(char **argv)
 	if(job->state == ST && (strcmp(argv[0], "bg") == 0)){
 		job->state = BG;
 		printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);
-		//printf("state er stopped og command er bg, setjum running i bg\n");
-		// senda SIGCONT signal to process group
-		kill(job->pid, SIGCONT);
+		kill(-(job->pid), SIGCONT);
 	}
 
 	/* If the state is ST and the command is fg, change the state to FG, send SIGCONT signal
 	 * to the process group and wait*/
 	else if(job->state == ST && (strcmp(argv[0], "fg") == 0)){
 		job->state = FG;
-		// senda SIGCONT á process group og wait með waitfg
-		kill(job->pid, SIGCONT);
+		kill(-(job->pid), SIGCONT);
 		waitfg(job->pid);
 	}
 	/* If the state is BG and the command is fg, change the state to FG and wait
