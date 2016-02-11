@@ -357,7 +357,7 @@ void do_bgfg(char **argv)
 	}
 	// ef argument er jobId og finnst ekki í jobs töflu
 	else if(!getjobjid(jobs, atoi(in)) && isJobId){
-		printf("fg %%%s: No such job\n", in);
+		printf("%%%s: No such job\n", in);
 		return;
 	}
 
@@ -370,20 +370,28 @@ void do_bgfg(char **argv)
 		job = getjobpid(jobs, atoi(in));
 	}
 	
-
-	if(job->state == 3 && (strcmp(argv[0], "bg") == 0)){
-		job->state = 1;
+	/* If the state is ST and the command is bg, change the state to BG and send SIGCONT  
+	 * signal to the process group. */
+	if(job->state == ST && (strcmp(argv[0], "bg") == 0)){
+		job->state = BG;
+		printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);
+		//printf("state er stopped og command er bg, setjum running i bg\n");
 		// senda SIGCONT signal to process group
 		kill(job->pid, SIGCONT);
 	}
-	else if(job->state == 3 && (strcmp(argv[0], "fg") == 0)){
-		job->state = 2;
+
+	/* If the state is ST and the command is fg, change the state to FG, send SIGCONT signal
+	 * to the process group and wait*/
+	else if(job->state == ST && (strcmp(argv[0], "fg") == 0)){
+		job->state = FG;
 		// senda SIGCONT á process group og wait með waitfg
 		kill(job->pid, SIGCONT);
 		waitfg(job->pid);
 	}
-	else if(job->state == 1 && (strcmp(argv[0], "fg") == 0)){
-		job->state = 2;
+	/* If the state is BG and the command is fg, change the state to FG and wait
+	 * (by calling waitfg) */
+	else if(job->state == BG  && (strcmp(argv[0], "fg") == 0)){
+		job->state = FG;
 		waitfg(job->pid);
 	}
 
