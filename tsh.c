@@ -200,7 +200,7 @@ void eval(char *cmdline)
 			sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 			if(execve(argv[0], argv, environ) < 0){
 				// gæti komið villa á þessa print skipun
-				printf("Whoopsy, the command %s was not found. \n", argv[0]);
+				printf("%s: Command not found\n", argv[0]);
 				fflush(stdout);
 				exit(0);
 			}
@@ -435,14 +435,13 @@ void sigchld_handler(int sig)
 			//printf("Child %d terminated normally with exit status=%d\n", pid, WEXITSTATUS(status));
 		}
 		else{
-			//printf("Child %d terminated abnormally\n", pid);
 			if(WIFSIGNALED(status)){
+				printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
 				deletejob(jobs, pid);
-				//printf("Child %d terminated caused by the signal=%d\n", pid, WTERMSIG(status));
 			}
-			if(WIFSTOPPED(status)){
-				getjobpid(jobs, pid)->state = 3;
-				//printf("Child %d was stopped by the signal=%d\n", pid, WSTOPSIG(status));	
+			else if(WIFSTOPPED(status)){
+				printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
+				getjobpid(jobs, pid)->state = ST;
 			}
 		}
 	}
@@ -460,8 +459,8 @@ void sigint_handler(int sig)
 	if(pid == 0)
 		return;
 	else{
-		int jid = pid2jid(pid);
-		printf("Job [%d] (%d) terminated by signal 2\n", jid, pid);
+		//int jid = pid2jid(pid);
+		//printf("Job [%d] (%d) terminated by signal 2\n", jid, pid);
 		kill(-(pid), SIGINT);
 	}
 }
@@ -476,8 +475,8 @@ void sigtstp_handler(int sig)
 	if(pid == 0) 
 		return;
 	else{
-		int jid = pid2jid(pid);
-		printf("Job [%d] (%d) stopped by signal 20\n", jid, pid);
+		//int jid = pid2jid(pid);
+		//printf("Job [%d] (%d) stopped by signal 20\n", jid, pid);
 		kill(-(pid), SIGTSTP);
 	}
 }
