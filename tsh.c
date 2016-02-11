@@ -176,30 +176,29 @@ int main(int argc, char **argv)
 void eval(char *cmdline)
 {	
 	char *argv[MAXARGS];
-	//char buf[MAXLINE];
 	int bg;
 	pid_t pid;
+
 	// Búum til signal sett og öddum SIGCHLD signal í settið
 	sigset_t sigset;
 	sigemptyset(&sigset);
 	sigaddset(&sigset, SIGCHLD);
-
-	//strcpy(buf, cmdline);
 	bg = parseline(cmdline, argv);
 		
 	if(argv[0] == NULL){
 		return;
 	}
 	
-	// ef ekki built in command
+	// Ef ekki built in command förum við inn í if
 	if(!builtin_cmd(argv)){
-		// remove the signals pointed to by set from the thread mask.
+		// blokkum SIGCHLD signal
 		sigprocmask(SIG_BLOCK, &sigset, NULL);
-		if((pid = fork()) == 0){
-			setpgrp();
+		/* Ef fork skilar 0, búum við til nýjan child process, unblockum
+		 * SIGCHLD signal og execute-um skipun úr cmdline */
+		if((pid = fork()) == 0){										
+			setpgrp();								
 			sigprocmask(SIG_UNBLOCK, &sigset, NULL);
 			if(execve(argv[0], argv, environ) < 0){
-				// gæti komið villa á þessa print skipun
 				printf("%s: Command not found\n", argv[0]);
 				fflush(stdout);
 				exit(0);
@@ -207,11 +206,13 @@ void eval(char *cmdline)
 			exit(0);
 		}
 
-		// parent waits for foreground job to terminate
+		/* Athugum hvort FG eða BG state */
 		if(!bg) {
-			// parent addar child process í job list
+			// parent addar process í job list
 			addjob(jobs, pid, FG, cmdline);
+			// unblockum signal
 			sigprocmask(SIG_UNBLOCK, &sigset, NULL);
+			// beðið eftir að FG job terminate-i
 			waitfg(pid);
 		}
 		else{
@@ -292,10 +293,7 @@ int parseline(const char *cmdline, char **argv)
 int builtin_cmd(char **argv)
 {
     char* command = *argv;
-    //printf("Value from command: %s\n",command);
 	if(!strcmp(command, "quit")){
-		// þurfum að tjekka hér hvort það séu einnhver background jobs og bara exita ef það eru engin
-		// ef það eru einnhver background jobs, prenta message og returna !
 		exit(0);
     }
 	else if(!strcmp(command, "fg") || !strcmp(command, "bg")){
@@ -303,7 +301,7 @@ int builtin_cmd(char **argv)
 		return 1;
     }
 	else if(!strcmp(command, "jobs")){
-		// eigum bara að lista upp background jobs, held að þetta sé í góðu svona...
+		// skrifum út BG jobs
 		listjobs(jobs);
 		return 1;
 	}   
@@ -312,6 +310,8 @@ int builtin_cmd(char **argv)
 	}
 }
 
+/* Hjálparfall, notað í do_bgfg
+ * fyrir error handling */
 int isNumber(char input[]){
 	int i;
 	for(i = 0; i < strlen(input); i++){
@@ -336,7 +336,9 @@ void do_bgfg(char **argv)
 	char in[10];
 	int isJobId = 0;
 	memset(&in[0], 0, sizeof(in));
-
+	
+	/* Ef input er job intput, copy-um JID
+	 * inní in breytu og true á isJobId breytu */
 	if(argv[1][0] == '%'){
 		strncpy(in, argv[1]+1, strlen(argv[1])-1);
 		isJobId = 1;
@@ -350,17 +352,19 @@ void do_bgfg(char **argv)
 		return;
 	}
 	
-	// ef argument er process id og finnst ekki í jobs töflu
+	// Ef argument er process id og finnst ekki í jobs töflu
 	if(!getjobpid(jobs, atoi(in)) && !isJobId){
 		printf("(%s): No such process\n", in);
 		return;
 	}
-	// ef argument er jobId og finnst ekki í jobs töflu
+	// Ef argument er jobId og finnst ekki í jobs töflu
 	else if(!getjobjid(jobs, atoi(in)) && isJobId){
 		printf("%%%s: No such job\n", in);
 		return;
 	}
-
+	
+	/* Búum til job bendi og sækjum job
+	 * entry-ið sem við ætlum að breyta */
 	struct job_t* job;
 	if(isJobId){
 		job = getjobjid(jobs, atoi(in));
@@ -369,28 +373,28 @@ void do_bgfg(char **argv)
 		job = getjobpid(jobs, atoi(in));
 	}
 	
-	/* If the state is ST and the command is bg, change the state to BG and send SIGCONT  
-	 * signal to the process group. */
+	/* Ef state er ST og command er bg, setjum við 
+	 * state-ið sem bg og sendum SIGCONT á process group */
 	if(job->state == ST && (strcmp(argv[0], "bg") == 0)){
 		job->state = BG;
 		printf("[%d] (%d) %s", job->jid, job->pid, job->cmdline);
 		kill(-(job->pid), SIGCONT);
 	}
-
-	/* If the state is ST and the command is fg, change the state to FG, send SIGCONT signal
-	 * to the process group and wait*/
+	/* Ef state er ST og command er fg, setjum við
+	 * state-ið sem fg, sendum SIGCONT og bíðum
+	 * eftir að fg terminate-ar */
 	else if(job->state == ST && (strcmp(argv[0], "fg") == 0)){
 		job->state = FG;
 		kill(-(job->pid), SIGCONT);
 		waitfg(job->pid);
 	}
-	/* If the state is BG and the command is fg, change the state to FG and wait
-	 * (by calling waitfg) */
+	/* Ef state er BG og command er fg,
+	 * breytum við state-i í FG og bíðum
+	 * eftir að það terminate-ar */
 	else if(job->state == BG  && (strcmp(argv[0], "fg") == 0)){
 		job->state = FG;
 		waitfg(job->pid);
 	}
-
     return;
 }
 /*
@@ -424,13 +428,16 @@ void sigchld_handler(int sig)
 	if(verbose){
 		printf("Sigchld handler keyrdur\n");
 	}
-	
+	/* Bíðum eftir breytungum á state-i á child process
+	 * ef process ID childs er jafn PID */
 	while((pid = waitpid(-1, &status, WNOHANG|WUNTRACED)) > 0){
+		// Child exitar venjulega
 		if(WIFEXITED(status)){
 			deletejob(jobs, pid);
 			//printf("Child %d terminated normally with exit status=%d\n", pid, WEXITSTATUS(status));
 		}
 		else{
+			// Child extitar útaf því að signal er mótekið, n.t.t. SIGINT/SIGTSTP
 			if(WIFSIGNALED(status)){
 				printf("Job [%d] (%d) terminated by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
 				deletejob(jobs, pid);
@@ -455,8 +462,6 @@ void sigint_handler(int sig)
 	if(pid == 0)
 		return;
 	else{
-		//int jid = pid2jid(pid);
-		//printf("Job [%d] (%d) terminated by signal 2\n", jid, pid);
 		kill(-(pid), SIGINT);
 	}
 }
@@ -471,8 +476,6 @@ void sigtstp_handler(int sig)
 	if(pid == 0) 
 		return;
 	else{
-		//int jid = pid2jid(pid);
-		//printf("Job [%d] (%d) stopped by signal 20\n", jid, pid);
 		kill(-(pid), SIGTSTP);
 	}
 }
