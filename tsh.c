@@ -4,9 +4,9 @@
  * You __MUST__ add your user information here below
  *
  * === User information ===
- * Group: Olafur & Asgeir
+ * Group: KILL69
  * User 1: olafurks10
- * SSN: 1807825919
+ * SSN: 2611872569
  * User 2: asgeira13
  * SSN: 2303882299
  * === End User Information ===
@@ -443,7 +443,7 @@ void sigchld_handler(int sig)
 				deletejob(jobs, pid);
 			}
 			else if(WIFSTOPPED(status)){
-				printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(pid), pid, WTERMSIG(status));
+				printf("Job [%d] (%d) stopped by signal %d\n", pid2jid(pid), pid, WSTOPSIG(status));
 				getjobpid(jobs, pid)->state = ST;
 			}
 		}
